@@ -1,6 +1,7 @@
-Pico
-====
+#Pico - JC Fork
 
-Pico is a stupidly simple, blazing fast, flat file CMS. See http://picocms.org/ for more info.
-<!--flippa verify-->
-[![I Love Open Source](http://www.iloveopensource.io/images/logo-lightbg.png)](http://www.iloveopensource.io/projects/524c55dcca7964c617000756)
+Pico is a nice, light-weight CMS. I needed something even more stupidly simple, and being a strong believer that php already is a templating language, I removed the twig dependency and the markdown dependency.
+
+Of course, the existing Pico plugins will not work with this version without some modification. I have already modified one or two, and may add them here in the future.
+
+I may also add back markdown as an optional file format.
