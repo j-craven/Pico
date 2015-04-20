@@ -1,3 +1,13 @@
+*** Pico Fork (JC) Changelog ***
+
+2015.04.20
+ * [Changed] removed dependency on twig
+ * [Changed] removed markdown
+ * [Changed] removed composer
+ * [Changed] removed modernizr script
+ * [Changed] added "RewriteBase /" to .htaccess (required by my host setup)
+
+
 *** Pico Changelog ***
 
 2013.10.23 - version 0.8

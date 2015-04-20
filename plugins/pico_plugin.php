@@ -74,11 +74,6 @@ class Pico_Plugin {
 		
 	}
 	
-	public function before_twig_register()
-	{
-		
-	}
-	
 	public function before_render(&$twig_vars, &$twig, &$template)
 	{
 		

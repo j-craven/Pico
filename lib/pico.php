@@ -1,24 +1,27 @@
 <?php
-use \Michelf\MarkdownExtra;
-
 /**
  * Pico
  *
  * @author Gilbert Pellegrom
  * @link http://picocms.org
  * @license http://opensource.org/licenses/MIT
- * @version 0.8
+ * 
+ * Modifications by JC (twig removal and use of plain html source files)
+ * 
+ * @version 0.1
  */
 class Pico {
 
 	private $plugins;
 
+
 	/**
 	 * The constructor carries out all the processing in Pico.
-	 * Does URL routing, Markdown processing and Twig processing.
+	 * Does URL routing and Markdown processing if required.
 	 */
 	public function __construct()
 	{
+		$this->do_log("Pre-plugin");
 		// Load plugins
 		$this->load_plugins();
 		$this->run_hooks('plugins_loaded');
@@ -41,10 +44,10 @@ class Pico {
 		if($url) $file = CONTENT_DIR . $url;
 		else $file = CONTENT_DIR .'index';
 
-		// Load the file
 		if(is_dir($file)) $file = CONTENT_DIR . $url .'/index'. CONTENT_EXT;
 		else $file .= CONTENT_EXT;
 
+		// Load the file
 		$this->run_hooks('before_load_content', array(&$file));
 		if(file_exists($file)){
 			$content = file_get_contents($file);
@@ -62,7 +65,6 @@ class Pico {
 		$this->run_hooks('before_parse_content', array(&$content));
 		$content = $this->parse_content($content);
 		$this->run_hooks('after_parse_content', array(&$content));
-		$this->run_hooks('content_parsed', array(&$content)); // Depreciated @ v0.8
 		
 		// Get all the pages
 		$pages = $this->get_pages($settings['base_url'], $settings['pages_order_by'], $settings['pages_order'], $settings['excerpt_length']);
@@ -80,13 +82,9 @@ class Pico {
 		$next_page = prev($pages);
 		$this->run_hooks('get_pages', array(&$pages, &$current_page, &$prev_page, &$next_page));
 
+		$this->do_log("Pre-render");
 		// Load the theme
-		$this->run_hooks('before_twig_register');
-		Twig_Autoloader::register();
-		$loader = new Twig_Loader_Filesystem(THEMES_DIR . $settings['theme']);
-		$twig = new Twig_Environment($loader, $settings['twig_config']);
-		$twig->addExtension(new Twig_Extension_Debug());
-		$twig_vars = array(
+		$template_vars = array(
 			'config' => $settings,
 			'base_dir' => rtrim(ROOT_DIR, '/'),
 			'base_url' => $settings['base_url'],
@@ -100,15 +98,46 @@ class Pico {
 			'current_page' => $current_page,
 			'next_page' => $next_page,
 			'is_front_page' => $url ? false : true,
+			'request_url' => $request_url,
+			'script_url' => $script_url,
+			'url' => $url,
 		);
 
 		$template = (isset($meta['template']) && $meta['template']) ? $meta['template'] : 'index';
-		$this->run_hooks('before_render', array(&$twig_vars, &$twig, &$template));
-		$output = $twig->render($template .'.html', $twig_vars);
+		$this->run_hooks('before_render', array(&$template_vars, &$template));
+		$output = $this->render($template .'.html', $template_vars);
 		$this->run_hooks('after_render', array(&$output));
 		echo $output;
 	}
 	
+	/**
+	 * Logging (JC)
+	 */
+	protected function do_log($location)
+	{
+		foreach($this->plugins as $plugin) {
+			$classes[] = get_class($plugin);
+		}
+		$class_list = implode(' ', $classes);
+		file_put_contents('log/my_log.txt',
+			"\n$location ".date("H:i:s").', '.
+			memory_get_usage(true).', '.
+			memory_get_peak_usage(true).' ['.
+			$class_list.']',
+			FILE_APPEND);
+	}
+
+	/**
+	 * Simple render (JC)
+	 */
+	protected function render($template, $data = null)
+	{
+        extract($data);
+        ob_start();
+        require $theme_dir . "/" . $template;
+        return ob_get_clean();
+	}
+
 	/**
 	 * Load any plugins
 	 */
@@ -129,16 +158,15 @@ class Pico {
 	}
 
 	/**
-	 * Parses the content using Markdown
+	 * Parses the content
 	 *
 	 * @param string $content the raw txt content
-	 * @return string $content the Markdown formatted content
+	 * @return string $content the parsed content
 	 */
 	protected function parse_content($content)
 	{
 		$content = preg_replace('#/\*.+?\*/#s', '', $content); // Remove comments and meta
 		$content = str_replace('%base_url%', $this->base_url(), $content);
-		$content = MarkdownExtra::defaultTransform($content);
 
 		return $content;
 	}
@@ -159,7 +187,8 @@ class Pico {
 			'author' 		=> 'Author',
 			'date' 			=> 'Date',
 			'robots'     	=> 'Robots',
-			'template'      => 'Template'
+			'template'      => 'Template',
+			'media'			=> 'Media'
 		);
 
 		// Add support for custom headers by hooking into the headers array
@@ -193,7 +222,6 @@ class Pico {
 			'base_url' => $this->base_url(),
 			'theme' => 'default',
 			'date_format' => 'jS M Y',
-			'twig_config' => array('cache' => false, 'autoescape' => false, 'debug' => false),
 			'pages_order_by' => 'alpha',
 			'pages_order' => 'asc',
 			'excerpt_length' => 50
